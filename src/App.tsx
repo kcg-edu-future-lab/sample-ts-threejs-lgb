@@ -4,7 +4,7 @@ import { Canvas } from '@react-three/fiber'
 import { Gltf, OrbitControls } from "@react-three/drei";
 import { MOUSE } from 'three';
 
-function App() {
+export default function App() {
   return (
     <div className="canvasContainer">
       <Canvas camera={{
@@ -28,5 +28,3 @@ function App() {
       </Canvas>
     </div>)
 }
-
-export default App
