@@ -1,8 +1,31 @@
-import { Suspense } from 'react'
+import { createContext, Suspense } from 'react'
 import { Vector3 } from 'three';
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Gltf, KeyboardControls, PointerLockControls, useKeyboardControls } from "@react-three/drei";
 import './App.css'
+import { Madoi, PeerEntered, type PeerEnteredDetail, type PeerInfo } from 'madoi-client';
+import { madoiKey, madoiUrl } from './keys';
+import { LocalJsonStorage } from './LocalJsonStorage';
+import { v4 as uuidv4 } from 'uuid';
+
+export function getLastPath(url: string){
+    if(url.indexOf("?") != -1) url = url.substring(0, url.indexOf("?"));
+    if(url == "/") url = "";
+    return url.replace(/[\/:]/g, "_").split("#")[0];
+}
+
+const roomId: string = `sample-museum-${getLastPath(window.location.href)}-sdsdffs24df2sdfsfjo4`;
+const ls = new LocalJsonStorage<{id: string, name: string, position: [number, number]}>(roomId);
+export const MadoiContext = createContext({
+  madoi: new Madoi(
+    `${madoiUrl}/${roomId}`, madoiKey, {
+      id: ls.get("id", ()=>uuidv4()),
+      profile: {
+        position: ls.get("position", [Math.random() * 300, Math.random() * 300])
+      }
+    }
+  )
+});
 
 function Player() {
   const [, getKeys] = useKeyboardControls();
