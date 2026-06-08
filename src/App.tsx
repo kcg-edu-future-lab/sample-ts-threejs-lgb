@@ -1,12 +1,15 @@
-import { createContext, Suspense } from 'react'
-import { Vector3 } from 'three';
+import { createContext, Suspense, useContext, useEffect, useRef, useState } from 'react'
+import { Mesh, Vector3 } from 'three';
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Gltf, KeyboardControls, PointerLockControls, useKeyboardControls } from "@react-three/drei";
-import './App.css'
-import { Madoi, PeerEntered, type PeerEnteredDetail, type PeerInfo } from 'madoi-client';
-import { madoiKey, madoiUrl } from './keys';
-import { LocalJsonStorage } from './LocalJsonStorage';
 import { v4 as uuidv4 } from 'uuid';
+import './App.css'
+import { madoiKey, madoiUrl } from './keys';
+import { Madoi } from 'madoi-client';
+import { useSharedModel } from 'madoi-client-react';
+import { LocalJsonStorage } from './LocalJsonStorage';
+import { PeerManager } from './PeerManager';
+import type { Peer, PositionChangedDetail, OrientationChangedDetail, vec3, vec4 } from './Peer';
 
 export function getLastPath(url: string){
     if(url.indexOf("?") != -1) url = url.substring(0, url.indexOf("?"));
@@ -21,14 +24,23 @@ export const MadoiContext = createContext({
     `${madoiUrl}/${roomId}`, madoiKey, {
       id: ls.get("id", ()=>uuidv4()),
       profile: {
-        position: ls.get("position", [Math.random() * 300, Math.random() * 300])
+        position: [-4, 1, 4], // 位置
+        quaternion: [0, 1, 0, 0]
       }
     }
   )
 });
 
-function Player() {
+interface PlayerProps{
+  onPositionChanged?: (position: vec3)=>void;
+  onOrientationChanged?: (orientation: vec4)=>void;
+}
+function Player({onPositionChanged, onOrientationChanged}: PlayerProps) {
   const [, getKeys] = useKeyboardControls();
+  const changed = useRef(false);
+  const pointerChanged = ()=>{
+    changed.current = true;
+  }
 
   useFrame((state, delta) => {
     const { forward, backward, left, right } = getKeys();
@@ -44,12 +56,74 @@ function Player() {
     direction.normalize().multiplyScalar(5 * delta);
     state.camera.translateOnAxis(direction, 1);
     state.camera.position.setY(1);
+    if(forward || backward || left || right){
+      const p = state.camera.position;
+      console.log("newpos", state.camera.position);
+      if(onPositionChanged) onPositionChanged([p.x, p.y, p.z]);
+    }
+
+    if(changed.current){
+      const q = state.camera.quaternion;
+      console.log("orientation changed.", q)
+      if(onOrientationChanged) onOrientationChanged([q.x, q.y, q.z, q.w]);
+      changed.current = false;
+    }
   });
 
-  return <PointerLockControls />;
+  return <PointerLockControls onChange={pointerChanged}/>;
+}
+
+interface MovableObjectProps{
+  peer: Peer;
+}
+function MovableObject({peer}: MovableObjectProps) {
+  const ref = useRef<Mesh>(null);
+  const [position, setPosition] = useState<vec3>(peer.position);
+  const [orientation, setOrientation] = useState<vec4>(peer.orientation);
+  const positionChanged = ({detail: {position}}: {detail: PositionChangedDetail})=>{
+    setPosition(position);
+  };
+  const orientationChanged = ({detail: {orientation}}: {detail: OrientationChangedDetail})=>{
+    setOrientation(orientation);
+  };
+
+  useEffect(()=>{
+    peer.addEventListener("positionChanged", positionChanged);
+    peer.addEventListener("orientationChanged", orientationChanged);
+    return ()=>{
+      peer.removeEventListener("positionChanged", positionChanged);
+      peer.removeEventListener("orientationChanged", orientationChanged);
+    }
+  }, []);
+
+  useFrame((_, delta) => {
+    if (ref.current) {
+      ref.current.position.setX(position[0]);
+      ref.current.position.setY(position[1]);
+      ref.current.position.setZ(position[2]);
+      ref.current.quaternion.set(...orientation);
+    }
+  });
+
+  return (
+    <mesh ref={ref} position={position}>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial color="hotpink" />
+    </mesh>
+  );
 }
 
 export default function App() {
+  const madoi = useContext(MadoiContext).madoi;
+  const peerManager = useSharedModel(madoi, ()=>new PeerManager());
+
+  const onSelfPositionChanged = (position: vec3)=>{
+    madoi.updateSelfPeerProfile("position", position);
+  };
+  const onSelfOrientationChanged = (quaternion: vec4)=>{
+    madoi.updateSelfPeerProfile("orientation", quaternion);
+  };
+
   return <div style={{width: "100%", height: "100%"}}>
     <KeyboardControls map={[
         { name: 'forward', keys: ['ArrowUp', 'KeyW'] },
@@ -66,7 +140,10 @@ export default function App() {
         onCreated={({ camera }) => {
           camera.lookAt(0, 1, 0);
         }}>
-        <Player />
+        <Player onPositionChanged={onSelfPositionChanged} onOrientationChanged={onSelfOrientationChanged} />
+        {peerManager.otherAvatars.map(p =>{
+          return <MovableObject peer={p}/>;
+        })}
         <Suspense fallback={null}>
           <Gltf src="/Scaniverse 2026-05-11 131013.glb" />
         </Suspense>
