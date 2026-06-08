@@ -1,22 +1,18 @@
-import { createContext, Suspense, useContext, useRef } from 'react'
+import { createContext, Suspense, useContext, useEffect, useRef, useState } from 'react'
 import { Mesh, Vector3 } from 'three';
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Gltf, KeyboardControls, PointerLockControls, useKeyboardControls } from "@react-three/drei";
 import { v4 as uuidv4 } from 'uuid';
 import './App.css'
 import { madoiKey, madoiUrl } from './keys';
-import { Madoi } from 'madoi-client';
-import { useSharedModel } from 'madoi-client-react';
+import { Madoi, type PeerInfo } from './madoi';
 import { LocalJsonStorage } from './LocalJsonStorage';
-import { PeerManager } from './PeerManager';
-import type { Peer, vec3, vec4 } from './Peer';
 
 export function getLastPath(url: string){
     if(url.indexOf("?") != -1) url = url.substring(0, url.indexOf("?"));
     if(url == "/") url = "";
     return url.replace(/[\/:]/g, "_").split("#")[0];
 }
-
 const roomId: string = `sample-museum-${getLastPath(window.location.href)}-sdsdffs24df2sdfsfjo4`;
 const ls = new LocalJsonStorage<{id: string, name: string, position: [number, number]}>(roomId);
 export const MadoiContext = createContext({
@@ -25,21 +21,23 @@ export const MadoiContext = createContext({
       id: ls.get("id", ()=>uuidv4()),
       profile: {
         position: [-4, 1, 4], // 位置
-        quaternion: [0, 1, 0, 0]
+        orientation: [0, 1, 0, 0]
       }
     }
   )
 });
 
+type vec3 = [number, number, number];
+type vec4 = [number, number, number, number];
 interface PlayerProps{
   onPositionChanged?: (position: vec3)=>void;
   onOrientationChanged?: (orientation: vec4)=>void;
 }
 function Player({onPositionChanged, onOrientationChanged}: PlayerProps) {
   const [, getKeys] = useKeyboardControls();
-  const changed = useRef(false);
-  const pointerChanged = ()=>{
-    changed.current = true;
+  const orientationChanged = useRef(false);
+  const onPointerChanged = ()=>{
+    orientationChanged.current = true;
   }
 
   useFrame((state, delta) => {
@@ -61,31 +59,31 @@ function Player({onPositionChanged, onOrientationChanged}: PlayerProps) {
       if(onPositionChanged) onPositionChanged([p.x, p.y, p.z]);
     }
 
-    if(changed.current){
+    if(orientationChanged.current){
       const q = state.camera.quaternion;
       if(onOrientationChanged) onOrientationChanged([q.x, q.y, q.z, q.w]);
-      changed.current = false;
+      orientationChanged.current = false;
     }
   });
 
-  return <PointerLockControls onChange={pointerChanged}/>;
+  return <PointerLockControls onChange={onPointerChanged}/>;
 }
 
 interface MovableObjectProps{
-  peer: Peer;
+  peer: PeerInfo;
 }
 function MovableObject({peer}: MovableObjectProps) {
   const ref = useRef<Mesh>(null);
 
   useFrame((_, _delta) => {
     if (ref.current) {
-      ref.current.position.set(...peer.position);
-      ref.current.quaternion.set(...peer.orientation);
+      ref.current.position.set(...(peer.profile["position"] as vec3));
+      ref.current.quaternion.set(...(peer.profile["orientation"] as vec4));
     }
   });
 
   return (
-    <mesh ref={ref} position={peer.position}>
+    <mesh ref={ref} position={peer.profile["position"]}>
       <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial color="hotpink" />
     </mesh>
@@ -94,14 +92,20 @@ function MovableObject({peer}: MovableObjectProps) {
 
 export default function App() {
   const madoi = useContext(MadoiContext).madoi;
-  const peerManager = useSharedModel(madoi, ()=>new PeerManager());
+  const [_, setRenderRequired] = useState(new Object());
 
   const onSelfPositionChanged = (position: vec3)=>{
     madoi.updateSelfPeerProfile("position", position);
   };
-  const onSelfOrientationChanged = (quaternion: vec4)=>{
-    madoi.updateSelfPeerProfile("orientation", quaternion);
+  const onSelfOrientationChanged = (orientation: vec4)=>{
+    madoi.updateSelfPeerProfile("orientation", orientation);
   };
+
+  useEffect(()=>{
+    madoi.addEventListener("peerEntered", ()=>setRenderRequired(new Object()));
+    madoi.addEventListener("peerLeaved", ()=>setRenderRequired(new Object()));
+    madoi.addEventListener("peerProfileUpdated", ()=>setRenderRequired(new Object()));
+  }, []);
 
   return <div style={{width: "100%", height: "100%"}}>
     <KeyboardControls map={[
@@ -120,7 +124,7 @@ export default function App() {
           camera.lookAt(0, 1, 0);
         }}>
         <Player onPositionChanged={onSelfPositionChanged} onOrientationChanged={onSelfOrientationChanged} />
-        {peerManager.otherAvatars.map(p =>{
+        {madoi.getOtherPeers().map(p =>{
           return <MovableObject key={p.id} peer={p}/>;
         })}
         <Suspense fallback={null}>
