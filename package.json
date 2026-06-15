@@ -15,6 +15,7 @@
     "@types/three": "^0.184.0",
     "madoi-client": "^0.3.0",
     "madoi-client-react": "^0.2.0",
+    "tcet": "^1.2.2",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "three": "^0.184.0",
