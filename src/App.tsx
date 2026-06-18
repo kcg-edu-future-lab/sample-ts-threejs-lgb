@@ -1,13 +1,18 @@
-import { createContext, Suspense, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, Suspense, useContext, useRef } from 'react'
 import { Mesh, Vector3 } from 'three';
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Gltf, KeyboardControls, PointerLockControls, useKeyboardControls } from "@react-three/drei";
 import { v4 as uuidv4 } from 'uuid';
+import { Madoi, ROOMINFO_DEFAULT, type PeerInfo, type Profile } from 'madoi-client';
+import { useOtherPeers } from 'madoi-client-react';
 import './App.css'
 import { madoiKey, madoiUrl } from './keys';
-import { Madoi, type PeerInfo } from './madoi';
 import { LocalJsonStorage } from './LocalJsonStorage';
 
+interface PeerProfile extends Profile{
+  position: vec3;
+  orientation: vec4;
+}
 export function getLastPath(url: string){
     if(url.indexOf("?") != -1) url = url.substring(0, url.indexOf("?"));
     if(url == "/") url = "";
@@ -16,14 +21,15 @@ export function getLastPath(url: string){
 const roomId: string = `sample-museum-${getLastPath(window.location.href)}-sdsdffs24df2sdfsfjo4`;
 const ls = new LocalJsonStorage<{id: string, name: string, position: [number, number]}>(roomId);
 export const MadoiContext = createContext({
-  madoi: new Madoi(
+  madoi: new Madoi<PeerProfile>(
     `${madoiUrl}/${roomId}`, madoiKey, {
       id: ls.get("id", ()=>uuidv4()),
       profile: {
         position: [-4, 1, 4], // 位置
         orientation: [0, 1, 0, 0]
-      }
-    }
+      },
+    },
+    ROOMINFO_DEFAULT
   )
 });
 
@@ -70,7 +76,7 @@ function Player({onPositionChanged, onOrientationChanged}: PlayerProps) {
 }
 
 interface MovableObjectProps{
-  peer: PeerInfo;
+  peer: PeerInfo<PeerProfile>;
 }
 function MovableObject({peer}: MovableObjectProps) {
   const ref = useRef<Mesh>(null);
@@ -92,7 +98,7 @@ function MovableObject({peer}: MovableObjectProps) {
 
 export default function App() {
   const madoi = useContext(MadoiContext).madoi;
-  const [_, setRenderRequired] = useState(new Object());
+  const otherPeers = useOtherPeers(madoi);
 
   const onSelfPositionChanged = (position: vec3)=>{
     madoi.updateSelfPeerProfile("position", position);
@@ -100,12 +106,6 @@ export default function App() {
   const onSelfOrientationChanged = (orientation: vec4)=>{
     madoi.updateSelfPeerProfile("orientation", orientation);
   };
-
-  useEffect(()=>{
-    madoi.addEventListener("peerEntered", ()=>setRenderRequired(new Object()));
-    madoi.addEventListener("peerLeaved", ()=>setRenderRequired(new Object()));
-    madoi.addEventListener("peerProfileUpdated", ()=>setRenderRequired(new Object()));
-  }, []);
 
   return <div style={{width: "100%", height: "100%"}}>
     <KeyboardControls map={[
@@ -124,7 +124,7 @@ export default function App() {
           camera.lookAt(0, 1, 0);
         }}>
         <Player onPositionChanged={onSelfPositionChanged} onOrientationChanged={onSelfOrientationChanged} />
-        {madoi.getOtherPeers().map(p =>{
+        {otherPeers.map(p =>{
           return <MovableObject key={p.id} peer={p}/>;
         })}
         <Suspense fallback={null}>
