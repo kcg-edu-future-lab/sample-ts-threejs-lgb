@@ -9,6 +9,7 @@ import { LocalJsonStorage } from './LocalJsonStorage';
 import { AvatarObject } from './Avatar';
 import './App.css'
 import { Player } from './Player';
+import { Chat } from './Chat';
 
 export type vec3 = [number, number, number];
 export type vec4 = [number, number, number, number];
@@ -43,34 +44,37 @@ export default function App() {
     madoi.updateSelfPeerProfile("orientation", orientation);
   };
 
-  return <div style={{width: "100%", height: "100%"}}>
-    <KeyboardControls map={[
-      { name: 'forward', keys: ['ArrowUp', 'KeyW'] },
-      { name: 'backward', keys: ['ArrowDown', 'KeyS'] },
-      { name: 'left', keys: ['ArrowLeft', 'KeyA'] },
-      { name: 'right', keys: ['ArrowRight', 'KeyD'] },
-      { name: 'jump', keys: ['Space'] },
-    ]}>
-      <Canvas
-        style={{width: "100%", height: "640px"}}
-        camera={{
-          fov: 45, // 視野角
-          position: [-4, 1, 4], // 位置
-        }}
-        onCreated={({ camera }) => {
-          camera.lookAt(0, 1, 0);
-      }}>
-        <Player
-          onPositionChanged={onSelfPositionChanged}
-          onOrientationChanged={onSelfOrientationChanged} />
-        {otherPeers.map(p =>{
-          return <AvatarObject key={p.id} peer={p}/>;
-        })}
-        <Suspense fallback={null}>
-          <Gltf src="./Scaniverse 2026-05-11 131013.glb" />
-        </Suspense>
-        <ambientLight intensity={1} />
-      </Canvas>
-    </KeyboardControls>
+  return <div className="appLayout">
+    <div className="canvasPane">
+      <KeyboardControls map={[
+        { name: 'forward', keys: ['ArrowUp', 'KeyW'] },
+        { name: 'backward', keys: ['ArrowDown', 'KeyS'] },
+        { name: 'left', keys: ['ArrowLeft', 'KeyA'] },
+        { name: 'right', keys: ['ArrowRight', 'KeyD'] },
+        { name: 'jump', keys: ['Space'] },
+      ]}>
+        <Canvas
+          style={{width: "100%", height: "640px"}}
+          camera={{
+            fov: 45, // 視野角
+            position: [-4, 1, 4], // 位置
+          }}
+          onCreated={({ camera }) => {
+            camera.lookAt(0, 1, 0);
+        }}>
+          <Player
+            onPositionChanged={onSelfPositionChanged}
+            onOrientationChanged={onSelfOrientationChanged} />
+          {otherPeers.map(p =>{
+            return <AvatarObject key={p.id} peer={p}/>;
+          })}
+          <Suspense fallback={null}>
+            <Gltf src="./Scaniverse 2026-05-11 131013.glb" />
+          </Suspense>
+          <ambientLight intensity={1} />
+        </Canvas>
+      </KeyboardControls>
+    </div>
+    <Chat madoi={madoi} />
   </div>;
 }
