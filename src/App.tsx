@@ -5,36 +5,32 @@ import { Gltf, KeyboardControls, PointerLockControls, useKeyboardControls } from
 import { v4 as uuidv4 } from 'uuid';
 import { Madoi, ROOMINFO_DEFAULT, type PeerInfo, type Profile } from 'madoi-client';
 import { useOtherPeers } from 'madoi-client-react';
-import './App.css'
 import { madoiKey, madoiUrl } from './keys';
 import { LocalJsonStorage } from './LocalJsonStorage';
+import './App.css'
 
+type vec3 = [number, number, number];
+type vec4 = [number, number, number, number];
 interface PeerProfile extends Profile{
   position: vec3;
   orientation: vec4;
 }
-export function getLastPath(url: string){
-    if(url.indexOf("?") != -1) url = url.substring(0, url.indexOf("?"));
-    if(url == "/") url = "";
-    return url.replace(/[\/:]/g, "_").split("#")[0];
-}
-const roomId: string = `sample-museum-${getLastPath(window.location.href)}-sdsdffs24df2sdfsfjo4`;
-const ls = new LocalJsonStorage<{id: string, name: string, position: [number, number]}>(roomId);
+const lastPath = new URL(window.location.href).pathname.split("/").filter(Boolean).slice(-1)[0];
+const roomId: string = `sample-museum-${lastPath}-sdsdffs24df2sdfsfjo4`;
+const ls = new LocalJsonStorage<{id: string, name: string}>(roomId);
 export const MadoiContext = createContext({
   madoi: new Madoi<PeerProfile>(
     `${madoiUrl}/${roomId}`, madoiKey, {
       id: ls.get("id", ()=>uuidv4()),
       profile: {
         position: [-4, 1, 4], // 位置
-        orientation: [0, 1, 0, 0]
+        orientation: [0, 1, 0, 0]  // 向き
       },
     },
     ROOMINFO_DEFAULT
   )
 });
 
-type vec3 = [number, number, number];
-type vec4 = [number, number, number, number];
 interface PlayerProps{
   onPositionChanged?: (position: vec3)=>void;
   onOrientationChanged?: (orientation: vec4)=>void;
@@ -44,7 +40,7 @@ function Player({onPositionChanged, onOrientationChanged}: PlayerProps) {
   const orientationChanged = useRef(false);
   const onPointerChanged = ()=>{
     orientationChanged.current = true;
-  }
+  };
 
   useFrame((state, delta) => {
     const { forward, backward, left, right } = getKeys();
@@ -83,8 +79,8 @@ function MovableObject({peer}: MovableObjectProps) {
 
   useFrame((_, _delta) => {
     if (ref.current) {
-      ref.current.position.set(...(peer.profile["position"] as vec3));
-      ref.current.quaternion.set(...(peer.profile["orientation"] as vec4));
+      ref.current.position.set(...(peer.profile["position"]));
+      ref.current.quaternion.set(...(peer.profile["orientation"]));
     }
   });
 
