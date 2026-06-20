@@ -15,17 +15,20 @@
     "@types/three": "^0.184.0",
     "madoi-client": "^0.5.1",
     "madoi-client-react": "^0.4.0",
-    "tcet": "^1.2.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "tcet": "^1.2.2",
     "three": "^0.184.0",
     "uuid": "^14.0.0"
   },
   "devDependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/plugin-proposal-decorators": "^8.0.2",
+    "@rolldown/plugin-babel": "^0.2.3",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react-swc": "^4.3.1",
+    "@vitejs/plugin-react": "^6.0.2",
     "oxlint": "^1.69.0",
     "typescript": "~6.0.3",
     "vite": "^8.0.16"
