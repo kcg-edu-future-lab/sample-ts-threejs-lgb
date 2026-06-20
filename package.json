@@ -13,8 +13,8 @@
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@types/three": "^0.184.0",
-    "madoi-client": "^0.4.1",
-    "madoi-client-react": "^0.3.0",
+    "madoi-client": "^0.5.1",
+    "madoi-client-react": "^0.4.0",
     "tcet": "^1.2.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -27,7 +27,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react-swc": "^4.3.1",
     "oxlint": "^1.69.0",
-    "typescript": "~6.0.2",
+    "typescript": "~6.0.3",
     "vite": "^8.0.16"
   }
 }

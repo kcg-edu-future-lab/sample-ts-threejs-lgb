@@ -2,7 +2,7 @@ import { createContext, Suspense, useContext } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Gltf, KeyboardControls } from "@react-three/drei";
 import { v4 as uuidv4 } from 'uuid';
-import { Madoi, ROOMINFO_DEFAULT, type Profile } from 'madoi-client';
+import { Madoi, type Profile } from 'madoi-client';
 import { useOtherPeers } from 'madoi-client-react';
 import { madoiKey, madoiUrl } from './keys';
 import { LocalJsonStorage } from './LocalJsonStorage';
@@ -28,8 +28,7 @@ export const MadoiContext = createContext({
         position: [-4, 1, 4], // 位置
         orientation: [0, 1, 0, 0]  // 向き
       },
-    },
-    ROOMINFO_DEFAULT
+    }
   )
 });
 
