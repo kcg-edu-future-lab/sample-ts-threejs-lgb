@@ -14,7 +14,7 @@
     "@react-three/fiber": "^9.6.1",
     "@types/three": "^0.184.0",
     "madoi-client": "^0.5.1",
-    "madoi-client-react": "^0.4.0",
+    "madoi-client-react": "^0.4.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "tcet": "^1.2.2",
