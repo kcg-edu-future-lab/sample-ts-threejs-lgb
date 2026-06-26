@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Madoi, type Profile } from 'madoi-client';
 import { useOtherPeers } from 'madoi-client-react';
 import { madoiKey, madoiUrl } from './keys';
-import { LocalJsonStorage } from './LocalJsonStorage';
+import { TypedLocalStorage } from './TypedStorage';
 import { AvatarObject } from './Avatar';
 import './App.css'
 import { Player } from './Player';
@@ -20,11 +20,11 @@ export interface PeerProfile extends Profile{
 }
 const lastPath = new URL(window.location.href).pathname.split("/").filter(Boolean).slice(-1)[0];
 const roomId: string = `sample-museum-${lastPath}-sdsdffs24df2sdfsfjo4`;
-const ls = new LocalJsonStorage<{id: string, name: string}>(roomId);
+const ls = new TypedLocalStorage<{id: string, name: string}>(`madoi.${roomId}`);
 export const MadoiContext = createContext({
   madoi: new Madoi<PeerProfile>(
     `${madoiUrl}/${roomId}`, madoiKey, {
-      id: ls.get("id", ()=>uuidv4()),
+      id: ls.getOrCreateItem("id", ()=>uuidv4()),
       profile: {
         position: [-4, 1, 4], // 位置
         orientation: [0, 1, 0, 0]  // 向き
