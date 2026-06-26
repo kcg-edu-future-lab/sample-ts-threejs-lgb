@@ -1,6 +1,6 @@
-import { useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react';
+import { useRef, type KeyboardEvent, type MouseEvent, type SubmitEvent } from 'react';
 import { ChangeState, ClassName, Distributed, GetState, Madoi, SetState } from 'madoi-client';
-import { useMadoiModel } from 'madoi-client-react';
+import { useMadoiModel, useSelfPeer } from 'madoi-client-react';
 import type { PeerProfile } from './App';
 import './Chat.css';
 
@@ -42,30 +42,27 @@ const stopEventPropagation = (event: MouseEvent<HTMLElement> | KeyboardEvent<HTM
 
 export function Chat({ madoi }: ChatProps) {
   const chatModel = useMadoiModel(madoi, () => new ChatModel());
-  const [chatText, setChatText] = useState("");
-  const [speakerName, setSpeakerName] = useState(() => {
-    const name = madoi.getSelfPeer().profile.name;
-    return typeof name === "string" ? name : "";
-  });
-  const selfPeerId = madoi.getSelfPeer().id;
-  const resolvedSpeakerName = speakerName.trim() || "You";
+  const speakerNameRef = useRef<HTMLInputElement>(null!);
+  const chatMessageRef = useRef<HTMLInputElement>(null!);
+  const selfPeer = useSelfPeer(madoi);
 
-  const updateSpeakerName = (event: FormEvent<HTMLFormElement>)=>{
+  const updateSpeakerName = (event: SubmitEvent<HTMLFormElement>)=>{
     event.preventDefault();
-    madoi.updateSelfPeerProfile("name", speakerName.trim() || undefined);
+    if(speakerNameRef.current.value.trim().length == 0) return;
+    madoi.updateSelfPeerProfile("name", speakerNameRef.current.value);
   };
 
-  const sendChatMessage = (event: FormEvent<HTMLFormElement>)=>{
+  const sendChatMessage = (event: SubmitEvent<HTMLFormElement>)=>{
     event.preventDefault();
-    const text = chatText.trim();
+    const text = chatMessageRef.current.value.trim();
     if(text.length === 0) return;
     chatModel.addMessage({
-      peerId: selfPeerId,
-      senderName: resolvedSpeakerName,
+      peerId: selfPeer.id,
+      senderName: selfPeer.profile.name,
       text,
       sentAt: new Date().toLocaleTimeString(),
     });
-    setChatText("");
+    chatMessageRef.current.value = "";
   };
 
   return <aside
@@ -83,10 +80,8 @@ export function Chat({ madoi }: ChatProps) {
       <span>Chat</span>
       <form className="speakerNameForm" onSubmit={updateSpeakerName}>
         <input
+          ref={speakerNameRef}
           aria-label="Speaker name"
-          value={speakerName}
-          onChange={event => setSpeakerName(event.target.value)}
-          onBlur={() => madoi.updateSelfPeerProfile("name", speakerName.trim() || undefined)}
           placeholder="名前"
         />
         <button type="submit">変更</button>
@@ -96,7 +91,7 @@ export function Chat({ madoi }: ChatProps) {
       {chatModel.getMessages().map((message, index) => (
         <div className="chatMessage" key={index}>
           <div className="chatMeta">
-            <span>{message.senderName ?? (message.peerId === selfPeerId ? "You" : message.peerId.slice(0, 8))}</span>
+            <span>{(message.peerId === selfPeer.id ? "(You)" : "") + (message.senderName || message.peerId.slice(0, 8))}</span>
             <time>{message.sentAt}</time>
           </div>
           <div className="chatText">{message.text}</div>
@@ -105,9 +100,8 @@ export function Chat({ madoi }: ChatProps) {
     </div>
     <form className="chatForm" onSubmit={sendChatMessage}>
       <input
+        ref={chatMessageRef}
         aria-label="Chat message"
-        value={chatText}
-        onChange={event => setChatText(event.target.value)}
         placeholder="メッセージを入力"
       />
       <button type="submit">送信</button>

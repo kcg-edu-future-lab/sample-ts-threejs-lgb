@@ -14,6 +14,7 @@ import { Chat } from './Chat';
 export type vec3 = [number, number, number];
 export type vec4 = [number, number, number, number];
 export interface PeerProfile extends Profile{
+  name?: string;
   position: vec3;
   orientation: vec4;
 }
@@ -44,7 +45,7 @@ export default function App() {
   };
 
   return <div className="appLayout">
-    <div className="canvasPane">
+    {<div className="canvasPane">
       <KeyboardControls map={[
         { name: 'forward', keys: ['ArrowUp', 'KeyW'] },
         { name: 'backward', keys: ['ArrowDown', 'KeyS'] },
@@ -73,7 +74,7 @@ export default function App() {
           <ambientLight intensity={1} />
         </Canvas>
       </KeyboardControls>
-    </div>
+    </div>}
     <Chat madoi={madoi} />
   </div>;
 }
